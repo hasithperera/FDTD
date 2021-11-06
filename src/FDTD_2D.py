@@ -12,13 +12,15 @@ from matplotlib.animation import FuncAnimation
 
 import time
 
-domain_x = 200;
-domain_y = 100;
+domain_x = 201;
+domain_y = 201;
 
 src_loc = [0,0]
 
 
 Ez = np.zeros([domain_x,domain_y])
+# Ez[100:102,25:27]= 1 
+# Ez[98:102,98:102]=1;
 
 
 Hx = np.zeros([domain_x,domain_y])
@@ -27,80 +29,76 @@ Hy = np.zeros([domain_x,domain_y])
 dy = 1
 dx = 1
 dz = 1.;
-mu = 1;
-epsilon = 1;
+mu = 2;
+epsilon = 2;
 dt = 1;
 
 
-
-def src_gaussian_2D(x,mu=50,sig=15):   
-    return np.exp(-1*(np.power(x-mu,2))/np.power(sig,2))
+def src_gaussian_2D(x,mu=20,sig=10):   
+    return 50*np.exp(-1*(np.power(x-mu,2))/np.power(sig,2))
     
 
-def update_FDTD_2D(time):
-    print(time)
+def update_FDTD_2D(t):
+    
+    print(t,Ez[50,50])
+    # print(time)
     
     # print(time,src_gaussian_2D(time),Ez[50,40])
     
-    Ez[50,50] = src_gaussian_2D(time)
-    
-    # data.append(Ez[40,50])
-    # data_src.append(Ez[50,1])
-    #equation 1
-    Hx[:,0:domain_y-1] = Hx[:,0:domain_y-1] + (Ez[:,1:domain_y]-Ez[:,0:domain_y-1])*(dt/(mu*dy))
-    
-    #equation 2
-    Hy[0:domain_x-1,:] = Hy[0:domain_x-1,:] - (Ez[1:domain_x,:]-Ez[0:domain_x-1,:])*(dt/(dx*mu))
+    # Ez[100,100] = 1
+    Ez[100,100] = src_gaussian_2D(t)
     
     #equation 3   
-    Ez[0:domain_x-1,0:domain_y-1] = ( Ez[0:domain_x-1,0:domain_y-1] 
-                                      - (dt/(epsilon*dy))*(Hx[0:domain_x-1,1:domain_y] 
-                                                          - Hx[0:domain_x-1,0:domain_y-1]) 
-                                      + (dt/(epsilon*dx))*(Hy[1:domain_x,0:domain_y-1]
-                                                          -Hy[0:domain_x-1,0:domain_y-1]))
-    if time%50 == 0:
-        print("Plot")
-        plt.imshow(Ez)
-        plt.show()
-        
+    Ez[1:domain_x,1:domain_y] = ( Ez[1:domain_x,1:domain_y] 
+                                      - (dt/(epsilon*dy))*(Hx[1:domain_x,1:domain_y] 
+                                                          - Hx[1:domain_x,0:domain_y-1]) 
+                                      + (dt/(epsilon*dx))*(Hy[1:domain_x,1:domain_y]
+                                                         -Hy[0:domain_x-1,1:domain_y]))
     
-    # im.set_array(Ez/np.max(np.max(Ez)))
     
-    # return [im]
-
+    
+    
+    
+   
+    
+    #equation 1
+    Hx[:,0:domain_y-1] = Hx[:,0:domain_y-1] - (Ez[:,1:domain_y]-Ez[:,0:domain_y-1])*(dt/(mu*dy))
+    
+    
+    
+    #equation 2
+    Hy[0:domain_x-1,:] = Hy[0:domain_x-1,:] +(Ez[1:domain_x,:]-Ez[0:domain_x-1,:])*(dt/(dx*mu))
+    
+   
+    
+    
+    im.set_array(Ez)   
+    return im,
+    
+    
 
 def init():
-    return [im]
+    # plt.set_xlim(0, domain_x)
+    # plt.set_ylim(0,domain_y)
+    print("Clear Ez")
+    return im,
 
 
-fig, ax = plt.subplots()
-im = plt.imshow(Ez)
+
 data = []
 data_src = []
+fig = plt.figure( figsize=(8,8) )
+
 
 if __name__=='__main__':
     
     print("Start")
+    im = plt.imshow(Ez)
     
     
    
-    # ani = FuncAnimation(fig, update_FDTD_2D, frames=np.linspace(0, 100, 101),
-                    # init_func=init, blit=True,interval=100)
+    ani = FuncAnimation(fig, update_FDTD_2D, frames=np.linspace(0, 1000, 1001),
+                    init_func=init, blit=True,interval=100)
     
-    
-    # # plt.show()
-    for i in range(1,300):
-        # print(i)
-        update_FDTD_2D(i)
-        #print(Ez[50])
-        
-    # plt.clf()
-    # plt.plot(data)
-    # plt.plot(data_src,'o')
-    # plt.show()
-    
-    # xx = np.arange(1,100)
-    # plt.clf()
-    # plt.plot(xx,src_gaussian_2D(xx))
-    
-    
+    im = plt.imshow(Ez,vmin=0,vmax=1)
+            
