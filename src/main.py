@@ -3,30 +3,33 @@ PHYS 611
 
 Hasith Perera
 """
-
-
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib.animation import FuncAnimation
 
-domain_x =200;
+domain_x =500;
 
 Ez = np.zeros([domain_x,1])
 Hy = np.zeros([domain_x,1])
 
 Jz = np.zeros([domain_x,1])
+epsilon_r = np.ones([domain_x,1])
+
+epsilon_r[250:] = 8
+
+
 
 #source location
-src_loc = 100;
+src_loc = 1;
 
 time_end = 200;
 dt = 1
 dx = 1
 mu_0 = 1
 epsilon_0 = 1
+
+
 gauss_sigma = .01;
 gauss_mu = 100
 
@@ -47,16 +50,20 @@ def src_step(time,start_t,width):
         
     return 0
     
+def src_sin(time,A,f):
+    if (2*f*time > 4*np.pi):
+        return 0
+    return A*np.sin(2*f*time)
+    
 
 def FDTD_update(time):
     
     #inject a source to Ez[0]      
     #Ez[100] = np.exp(-gauss_sigma*np.power(i-gauss_mu,2))
     
-    Jz[src_loc] = src_gauss(time, gauss_mu, gauss_sigma)
-    # Jz[src_loc] = src_step(time, 10, 10)
-
-    
+    # Jz[src_loc] = src_gauss(time, gauss_mu, gauss_sigma)
+    Jz[src_loc] = src_sin(time, 1, .02)
+    # print(Jz[src_loc])
     #probe values
     detector.append(Ez[detector_location_x][0])
 
@@ -71,15 +78,19 @@ def FDTD_update(time):
     Ez[0]=Ez[1]
     
     #update eq from ampher's law
-    Ez[1:len(Ez)] = Ez[1:len(Ez)]+(dt/(dx*epsilon_0)) * (Hy[1:len(Hy)]-Hy[0:len(Hy)-1])
+    Ez[1:len(Ez)] = Ez[1:len(Ez)]+(dt/(dx*epsilon_0*epsilon_r[1:len(Ez)])) * (Hy[1:len(Hy)]-Hy[0:len(Hy)-1])
     
     #current term
-    
-    Ez[1:len(Ez)] = Ez[1:len(Ez)] + dt/epsilon_0 * Jz[1:len(Ez)]
-    
+    Ez[1:len(Ez)] = Ez[1:len(Ez)] + dt/(epsilon_0*epsilon_r[1:len(Ez)]) * Jz[1:len(Ez)]
     
     #PBC to the right
     Hy[len(Hy)-1]=Hy[len(Hy)-2]
+    
+    
+    ## adding propergation in dielectric medium
+    
+    
+    
     ln.set_data(np.arange(0,domain_x),Ez)
     
     return ln,
@@ -87,7 +98,7 @@ def FDTD_update(time):
 
 def init():
     ax.set_xlim(0, domain_x)
-    ax.set_ylim(-2, 2)
+    ax.set_ylim(-1, 1)
     Ez = np.zeros([domain_x,1])
     print("Clear Ez")
     return ln,
