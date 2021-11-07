@@ -14,16 +14,18 @@ Ez = np.zeros([domain_x,1])
 Hy = np.zeros([domain_x,1])
 
 Jz = np.zeros([domain_x,1])
+
+
 epsilon_r = np.ones([domain_x,1])
 
-epsilon_r[250:] = 8
-
+#define medium
+epsilon_r[200:300] = 4
 
 
 #source location
 src_loc = 1;
 
-time_end = 200;
+time_end = 1000;
 dt = 1
 dx = 1
 mu_0 = 1
@@ -36,7 +38,7 @@ gauss_mu = 100
 
 detector = []
 
-detector_location_x = 50
+detector_locs = [100,250,350]
  
 
 def src_gauss(time,mu,sigma):
@@ -51,21 +53,49 @@ def src_step(time,start_t,width):
     return 0
     
 def src_sin(time,A,f):
-    if (2*f*time > 4*np.pi):
+    if (2*f*time > 2*np.pi):
         return 0
     return A*np.sin(2*f*time)
-    
 
+
+def dump_detector_data(Ez,time,detectors):
+    
+    print("{},".format(time),end='')
+    for detector in detectors:   
+       
+        print("{:.4e},".format(Ez[detector][0]),end='')
+    print('')
+
+    
+def write_to_file(Ez,time,detectors,file='log.dat'):
+    '''log to file at intervals'''
+    print(detectors)
+    
+    with open(file,'a+') as fp:
+        fp.write("{},".format(time))
+        for detector in detectors:       
+            
+            fp.wrtie("{},".format(Ez[detector][1]))
+        fp.write('\n')
+    
+    
+    
 def FDTD_update(time):
     
     #inject a source to Ez[0]      
     #Ez[100] = np.exp(-gauss_sigma*np.power(i-gauss_mu,2))
     
+    #gaussian source
     # Jz[src_loc] = src_gauss(time, gauss_mu, gauss_sigma)
+    
+    
+    #sine wave
     Jz[src_loc] = src_sin(time, 1, .02)
-    # print(Jz[src_loc])
+
+    
+    
     #probe values
-    detector.append(Ez[detector_location_x][0])
+    dump_detector_data(Ez,time,detector_locs)
 
     
     #update faraday's law
@@ -87,32 +117,45 @@ def FDTD_update(time):
     Hy[len(Hy)-1]=Hy[len(Hy)-2]
     
     
-    ## adding propergation in dielectric medium
+def ftdt_animate(time):
     
-    
+    FDTD_update(time)
     
     ln.set_data(np.arange(0,domain_x),Ez)
-    
     return ln,
 
 
 def init():
     ax.set_xlim(0, domain_x)
     ax.set_ylim(-1, 1)
-    Ez = np.zeros([domain_x,1])
+    # Ez = np.zeros([domain_x,1])
     print("Clear Ez")
     return ln,
 
+
+
+#define realtime animation
+animation = 0
+
 if __name__=='__main__':
     
-    print("Start")    
-    fig, ax = plt.subplots()
-    xdata, ydata = [], []
-    ln, = plt.plot([], [], 'ro')
+    
+    print("Start") 
     
     
-    ani = FuncAnimation(fig, FDTD_update, frames=np.linspace(1, 600, 600),
+    
+    if animation:
+        fig, ax = plt.subplots()
+        xdata, ydata = [], []
+        ln, = plt.plot([], [], 'ro')
+    
+        ani = FuncAnimation(fig, FDTD_update, frames=np.linspace(1, time_end, time_end),
                     init_func=init, blit=True,interval=10,repeat=False)
-    plt.show()
-    print("Exit")
+    
+        plt.show()
+        print("Exit")
+    else:
+        
+        for i in range(0,time_end):
+            FDTD_update(i)
     
