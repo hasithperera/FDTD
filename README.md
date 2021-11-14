@@ -11,5 +11,5 @@ This is my implementation of a EM wave propagation simulated using FDTD as a fin
 
 [x] Basic 2D engine
 [ ] PML boundary 
-[ ] Simulate lens/block of material
+[x] Simulate lens/block of material
 

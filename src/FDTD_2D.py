@@ -12,8 +12,8 @@ from matplotlib.animation import FuncAnimation
 
 import time
 
-domain_y = 501;
-domain_x = 501;
+domain_y = 500;
+domain_x = 500;
 
 src_loc = [0,0]
 
@@ -26,14 +26,18 @@ Ez = np.zeros([domain_y,domain_x])
 Hx = np.zeros([domain_y,domain_x])
 Hy = np.zeros([domain_y,domain_x])
 
+
+#design custom region
+epsilon = np.ones([domain_y,domain_x])*4;
+
 dy = 1
 dx = 1
-dz = 1.;
+dz = 1
 
 
 # match CFL condition
 mu = 2;
-epsilon = 2;
+# epsilon = 2;
 dt = 1;
 
 data = []
@@ -41,10 +45,13 @@ data2 = []
 probe_loc = [250,250]
 
 
-def src_gaussian_2D(x,mu=100,sig=35):   
-    return np.exp(-1*(np.power((x-mu)/sig,2)))   
 
-def src_sin(time,A,freq=.1):
+
+
+def src_gaussian_2D(x,mu=100,sig=35):   
+    return 10*np.exp(-1*(np.power((x-mu)/sig,2)))   
+
+def src_sin(time,A,freq=.08):
     return A*np.sin(time*freq)
 
 
@@ -53,20 +60,30 @@ def FDTD_2D(time):
        
         #equation 3   
         Ez[1:domain_y,1:domain_x] = ( Ez[1:domain_y,1:domain_x] 
-                                          - (dt/(epsilon*dy))*(Hx[1:domain_y,1:domain_x] 
+                                          - (dt/(epsilon[1:domain_y,1:domain_x]*dy))*(Hx[1:domain_y,1:domain_x] 
                                                               - Hx[1:domain_y,0:domain_x-1]) 
-                                          + (dt/(epsilon*dx))*(Hy[1:domain_y,1:domain_x]
+                                          + (dt/(epsilon[1:domain_y,1:domain_x]*dx))*(Hy[1:domain_y,1:domain_x]
                                                              -Hy[0:domain_y-1,1:domain_x]))
         
-         #source 
-        Ez[250,250] = src_gaussian_2D(time)
-        # Ez[250,250] = src_sin(tt,2,.1)
-    
+        #source 
+        # Ez[225:275,1] = src_gaussian_2D(time,sig=25)
+        Ez[100:400,2] = src_sin(time,2,.1)
+        
+       
+        # Ez[275:500,1:100] = 0
+        # Ez[0:225,1:100] = 0
+       
+        
         #equation 1
         Hx[:,0:domain_x-1] = Hx[:,0:domain_x-1] - (Ez[:,1:domain_x]-Ez[:,0:domain_x-1])*(dt/(mu*dy))
+        
+       
           
         #equation 2
         Hy[0:domain_y-1,:] = Hy[0:domain_y-1,:] +(Ez[1:domain_y,:]-Ez[0:domain_y-1,:])*(dt/(dx*mu))
+        # Hy[225,0:200] = 0 
+        # Hy[275,0:200] = 0 
+        
         
         #probe fields - debug
         
@@ -89,20 +106,65 @@ def update_FDTD_2D(t,run_n):
     # Ez[100,100] = 1
     
     for tt in range(t,t+run_n):
-        FTDT_2D(tt)
+        FDTD_2D(tt)
        
     
     print("End:",t+run_n)
     im.set_array(Ez)   
+    im.set_cmap('bwr')
     return im,
     
-    
-
-
 def init():
     print("Clear Ez")
+    plt.ylim([150,350])
     return im,
 
+
+def edge(x,y,x0,y0,angle):
+    if y<np.tan(angle)*(x-x0)+y0:
+        return 1
+    return 0
+
+
+def draw_lens(lens):
+    y0 = [(lens[2]+lens[3])/2,lens[3],lens[2]]
+    x0 = [lens[1],lens[0],lens[0]]
+    return np.polyfit(y0,x0,2)
+
+def plano_convex(x,y,p):
+    return np.ones_like(y)*x<np.polyval(p,y)
+
+
+
+def sim_optics1():
+    '''Place optical elements in the beam path'''
+    eps_2 = 1
+    angle = 10*np.pi/180
+    
+    for x in range(1,domain_x):
+        for y in range(1,domain_y):
+            if edge(x,y,250,250,angle):
+                epsilon[y,x] = eps_2
+
+
+
+
+def sim_optics2():
+    
+    
+    # epsilon = epsilon*4;
+    eps_2 = 4
+    angle = 10*np.pi/180
+    
+    p = draw_lens([50,150,0,500])
+    for x in range(1,domain_x):
+        # print(x)
+        # for y in range(1,domain_y):
+        epsilon[:,x] = plano_convex(x,np.arange(0,domain_y),p)*eps_2 + 1
+
+        
+    epsilon[:,0:50]=1
+    print("Lens generated")
 
 
 data = []
@@ -113,26 +175,30 @@ fig = plt.figure( figsize=(8,8) )
 if __name__=='__main__':
     
     print("Start")
-    # im = plt.imshow(Ez)
+    sim_optics2()
     
-    # plt.clf()
     
+    # im = plt.imshow(epsilon)
+    # plt.show()
+    
+    
+    im = plt.imshow(Ez,cmap='bwr')
     plot_tstep = 10
-    t_end = 500
+    t_end = 900
    
-    # ani = FuncAnimation(fig, update_FDTD_2D, frames=np.arange(0, t_end, plot_tstep),
-    #                 init_func=init, blit=True,interval=200,fargs=[plot_tstep],repeat = False)
+    ani = FuncAnimation(fig, update_FDTD_2D, frames=np.arange(0, t_end, plot_tstep),
+                    init_func=init, blit=True,interval=10,fargs=[plot_tstep],repeat = False)
     
 
 
-    for time in range(0,t_end):
-        FDTD_2D(time)      
+    # for time in range(0,t_end):
+    #     FDTD_2D(time)      
     
-    plt.plot(data)
-    plt.plot(data2)
+    # plt.plot(data)
+    # plt.plot(data2)
     
         # if time%50==0:
         #     plt.plot(Ez[:,250],'.-')
     
-    # im = plt.imshow(Ez,vmin=0,vmax=1)
+    im = plt.imshow(Ez,vmin=-1,vmax=1)
             
