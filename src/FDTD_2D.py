@@ -28,7 +28,7 @@ Hy = np.zeros([domain_y,domain_x])
 
 
 #design custom region
-epsilon = np.ones([domain_y,domain_x])*4;
+epsilon = np.ones([domain_y,domain_x])*8;
 
 dy = 1
 dx = 1
@@ -69,10 +69,6 @@ def FDTD_2D(time):
         # Ez[225:275,1] = src_gaussian_2D(time,sig=25)
         Ez[100:400,2] = src_sin(time,2,.1)
         
-       
-        # Ez[275:500,1:100] = 0
-        # Ez[0:225,1:100] = 0
-       
         
         #equation 1
         Hx[:,0:domain_x-1] = Hx[:,0:domain_x-1] - (Ez[:,1:domain_x]-Ez[:,0:domain_x-1])*(dt/(mu*dy))
@@ -81,9 +77,6 @@ def FDTD_2D(time):
           
         #equation 2
         Hy[0:domain_y-1,:] = Hy[0:domain_y-1,:] +(Ez[1:domain_y,:]-Ez[0:domain_y-1,:])*(dt/(dx*mu))
-        # Hy[225,0:200] = 0 
-        # Hy[275,0:200] = 0 
-        
         
         #probe fields - debug
         
@@ -101,10 +94,7 @@ def update_FDTD_2D(t,run_n):
     
     '''
     
-    print("Start:",t)
-    # print(time)    
-    # Ez[100,100] = 1
-    
+    print("Start:",t)   
     for tt in range(t,t+run_n):
         FDTD_2D(tt)
        
@@ -116,7 +106,6 @@ def update_FDTD_2D(t,run_n):
     
 def init():
     print("Clear Ez")
-    plt.ylim([150,350])
     return im,
 
 
@@ -139,22 +128,22 @@ def plano_convex(x,y,p):
 def sim_optics1():
     '''Place optical elements in the beam path'''
     eps_2 = 1
-    angle = 10*np.pi/180
+    angle = 40*np.pi/180
     
     for x in range(1,domain_x):
         for y in range(1,domain_y):
             if edge(x,y,250,250,angle):
                 epsilon[y,x] = eps_2
 
-
-
-
 def sim_optics2():
     
-    
-    # epsilon = epsilon*4;
+    '''
+    Plano-convex lens n=2 
+    background n=1
+    '''
+
     eps_2 = 4
-    angle = 10*np.pi/180
+
     
     p = draw_lens([50,150,0,500])
     for x in range(1,domain_x):
@@ -166,6 +155,19 @@ def sim_optics2():
     epsilon[:,0:50]=1
     print("Lens generated")
 
+def sim_optics3():
+    '''
+    Plano-convex lens n=1
+    background n=2
+    '''
+    
+    eps_2 = -3
+    p = draw_lens([50,150,0,500])
+    for x in range(1,domain_x):
+        epsilon[:,x] = plano_convex(x,np.arange(0,domain_y),p)*eps_2 +4
+
+    epsilon[:,0:50]=4
+
 
 data = []
 data_src = []
@@ -175,30 +177,25 @@ fig = plt.figure( figsize=(8,8) )
 if __name__=='__main__':
     
     print("Start")
+    
+    #define optics
+    
     sim_optics2()
     
     
-    # im = plt.imshow(epsilon)
-    # plt.show()
+
     
+    im0 = plt.imshow(epsilon,cmap='binary',vmin=1,vmax=10)
+    im = plt.imshow(Ez,cmap='bwr',vmin=-1,vmax=1,alpha=0.4)
+    # plt.gcf().set_size_inches(14,7)
+    # plt.ylim([0,350])
     
-    im = plt.imshow(Ez,cmap='bwr')
     plot_tstep = 10
-    t_end = 900
+    t_end = 700
    
     ani = FuncAnimation(fig, update_FDTD_2D, frames=np.arange(0, t_end, plot_tstep),
-                    init_func=init, blit=True,interval=10,fargs=[plot_tstep],repeat = False)
+                    init_func=init, blit=True,interval=10,fargs=[plot_tstep],repeat = False,save_count=70,)
     
-
-
-    # for time in range(0,t_end):
-    #     FDTD_2D(time)      
-    
-    # plt.plot(data)
-    # plt.plot(data2)
-    
-        # if time%50==0:
-        #     plt.plot(Ez[:,250],'.-')
-    
-    im = plt.imshow(Ez,vmin=-1,vmax=1)
+    # plt.colorbar()  
+    # ani.save("FDTD_2D_lens.gif", writer='imagemagick',fps=60)
             
